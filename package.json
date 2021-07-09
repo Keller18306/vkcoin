@@ -1,0 +1,23 @@
+{
+  "name": "lib-coin",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Keller18306/node-lib-coin.git"
+  },
+  "author": "Keller",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Keller18306/node-lib-coin/issues"
+  },
+  "homepage": "https://github.com/Keller18306/node-lib-coin#readme",
+  "dependencies": {
+    "request": "^2.88.2",
+    "ws": "^7.5.2"
+  }
+}
