@@ -7,6 +7,15 @@ type classParams = {
     key: string
 }
 
+export interface VKCoinAPI {
+    call(method: 'score', params: Types.MethodScoreParams): Promise<Types.MethodScoreResponse>
+    call(method: 'tx', params: Types.MethodTXParams): Promise<Types.MethodTXResponse>
+    call(method: 'send', params: Types.MethodSendParams): Promise<Types.MethodSendResponse>
+    call(method: 'set', params: Types.MethodSetStatusParams): Promise<Types.MethodSetStatusResponse>
+    call(method: 'set', params: Types.MethodSetNameParams): Promise<Types.MethodSetNameResponse>
+    call(method: 'set', params: Types.MethodSetCallbackParams): Promise<Types.MethodSetCallbackResponse>
+}
+
 export class VKCoinAPI {
     public key: string;
 
@@ -26,7 +35,7 @@ export class VKCoinAPI {
 
         if (response.error) throw new APIError(response.error.code, response.error.message)
 
-        return response
+        return response.response
     }
 
     async getUsersBalance(userIds: number[]): Promise<{ [vk_id: number]: number | null }> {
@@ -36,8 +45,8 @@ export class VKCoinAPI {
 
         const users: { [vk_id: number]: number | null } = {}
 
-        for (const user in response.response) {
-            users[+user] = response.response[user]
+        for (const user in response) {
+            users[+user] = response[user]
         }
 
         return users

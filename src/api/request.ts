@@ -1,6 +1,6 @@
 import { default as http } from 'request'
 
-class HttpError extends Error {
+export class HttpError extends Error {
     readonly code: number;
 
     readonly response: http.Response;

@@ -81,7 +81,7 @@ export declare interface VKCoinWebSocket {
 }
 
 export class VKCoinWebSocket extends EventEmitter {
-    public url: string;
+    public url: string | undefined;
 
     public ws: WebSocket | null = null;
 
@@ -92,10 +92,10 @@ export class VKCoinWebSocket extends EventEmitter {
 
     private queueId: number = 0;
 
-    constructor(iframe_url: string) {
+    constructor(iframe_url?: string) {
         super()
 
-        this.url = formatURL(iframe_url)
+        if(iframe_url) this.url = formatURL(iframe_url)
     }
 
     private onOpen() {
@@ -148,6 +148,7 @@ export class VKCoinWebSocket extends EventEmitter {
     }
 
     connect(): void {
+        if(!this.url) throw new Error('can not connect without url')
         if (this.ws != null) throw new Error('WebSocket is already started')
 
         this.ws = new WebSocket(this.url)
@@ -176,6 +177,10 @@ export class VKCoinWebSocket extends EventEmitter {
     reconnect(): void {
         if (this.ws != null) this.disconnect()
         this.connect()
+    }
+
+    async start() {
+
     }
 
     async command(command: string): Promise<string> {
