@@ -78,6 +78,12 @@ export declare interface VKCoinWebSocket {
     on(event: 'answer', listener: (data: { id: number, type: 'C' | 'R', message: string }) => void): this
     on(event: 'ALREADY_CONNECTED', listener: () => void): this
     on(event: 'BROKEN', listener: () => void): this
+
+    once(event: 'connect', listener: () => void): this
+    once(event: 'init', listener: (data: InitType) => void): this
+    once(event: 'answer', listener: (data: { id: number, type: 'C' | 'R', message: string }) => void): this
+    once(event: 'ALREADY_CONNECTED', listener: () => void): this
+    once(event: 'BROKEN', listener: () => void): this
 }
 
 export class VKCoinWebSocket extends EventEmitter {
@@ -95,7 +101,7 @@ export class VKCoinWebSocket extends EventEmitter {
     constructor(iframe_url?: string) {
         super()
 
-        if(iframe_url) this.url = formatURL(iframe_url)
+        if (iframe_url) this.url = formatURL(iframe_url)
     }
 
     private onOpen() {
@@ -144,11 +150,11 @@ export class VKCoinWebSocket extends EventEmitter {
     private onClose(code: number, reason: string) {
         if (this.pingInterval) clearInterval(this.pingInterval)
 
-        if(this.reconnectOnClose) this.reconnect()
+        if (this.reconnectOnClose) this.reconnect()
     }
 
     connect(): void {
-        if(!this.url) throw new Error('can not connect without url')
+        if (!this.url) throw new Error('can not connect without url')
         if (this.ws != null) throw new Error('WebSocket is already started')
 
         this.ws = new WebSocket(this.url)
@@ -180,7 +186,23 @@ export class VKCoinWebSocket extends EventEmitter {
     }
 
     async start() {
+        if (this.ws == null) throw new Error('WebSocket not connected')
 
+        const res = new Promise<true>((res, rej) => {
+            this.once('init', () => {
+                res(true)
+            })
+            this.once('BROKEN', () => {
+                rej(new Error('iframe_url is invalid'))
+            })
+            this.ws?.once('error', (err) => {
+                rej(err)
+            })
+        })
+
+        this.connect()
+
+        return res
     }
 
     async command(command: string): Promise<string> {
@@ -216,9 +238,9 @@ export class VKCoinWebSocket extends EventEmitter {
     }
 
     async transfer(vk_id: number, amount: number, isFromUrl: boolean = false, payload?: number, asMerchant?: boolean) {
-        if(isFromUrl && asMerchant) throw new Error('cannot send from url, when enabled as merchant')
-        if(asMerchant != undefined && payload == undefined) throw new Error('payload can not be undefined, when asMerchant declared')
-        if(payload != undefined && !(-2000000000 >= payload && payload <= 2000000000)) throw new Error(`payload range must be from -2000000000 to 2000000000`)
+        if (isFromUrl && asMerchant) throw new Error('cannot send from url, when enabled as merchant')
+        if (asMerchant != undefined && payload == undefined) throw new Error('payload can not be undefined, when asMerchant declared')
+        if (payload != undefined && !(-2000000000 >= payload && payload <= 2000000000)) throw new Error(`payload range must be from -2000000000 to 2000000000`)
 
         return this.command(`${WSOpcodes.TRANSACTION} ${vk_id} ${amount} ${Number(isFromUrl)}${payload != undefined ? ` ${payload}` : ''}${asMerchant != undefined ? ` ${Number(asMerchant)}` : ''}`)
     }

@@ -31,7 +31,7 @@ export class VKCoin {
 
         this.ws = new VKCoinWebSocket(url)
 
-        this.ws.connect()
+        await this.ws.start()
 
         const key = this.ws.getMerchantKey()
 
