@@ -4,7 +4,7 @@ export type AuthParams = {
 }
 
 export type MethodTXParams = {
-    tx: [1] | [2]
+    tx: [1] | [2] | number[]
 }
 
 export type MethodSendParams = {

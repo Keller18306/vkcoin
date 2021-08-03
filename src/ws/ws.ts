@@ -2,6 +2,43 @@ import { EventEmitter } from 'events';
 import { formatURL, isJSON, timePromise } from './utils';
 
 import { default as WebSocket } from 'ws'
+import { TransferItem } from '../api/types';
+
+type Group = {
+    id: number,
+    name: string,
+    screen_name: string,
+    is_closed: 0 | 1,
+    type: 'group' | 'page',
+    photo_200: string
+}
+
+type Top = {
+    userTop: {
+        id: number,
+        score: number,
+        first_name: string,
+        last_name: string,
+        can_access_closed: boolean,
+        is_closed: boolean,
+        photo_200: string,
+        link: string
+    }[],
+    groupTop: {
+        id: number,
+        score: number,
+        name: string,
+        screen_name: string,
+        is_closed: boolean,
+        type: 'page' | 'group',
+        photo_200: string,
+        link: string
+    }[],
+    online: number,
+    txSum: number[],
+    total: number[],
+    groupInfo: null | any /*tempory any type*/
+}
 
 type InitType = {
     type: 'INIT',
@@ -11,32 +48,7 @@ type InitType = {
     pow: string/*"530-220*786+window.Math.round(680/2)*2-((typeof window.parseInt !== 'undefined') ? 1 : 5)+(window.WebSocket ? 1 : 2)+902"*/,
     items: [],
     tx: number[],
-    top: {
-        userTop: {
-            id: number,
-            score: number,
-            first_name: string,
-            last_name: string,
-            can_access_closed: boolean,
-            is_closed: boolean,
-            photo_200: string,
-            link: string
-        }[],
-        groupTop: {
-            id: number,
-            score: number,
-            name: string,
-            screen_name: string,
-            is_closed: boolean,
-            type: 'page' | 'group',
-            photo_200: string,
-            link: string
-        }[],
-        online: number,
-        txSum: number[],
-        total: number[],
-        groupInfo: null | any /*tempory any type*/
-    },
+    top: Top,
     tick: number,
     vkpay: boolean,
     ccp: number,
@@ -63,13 +75,27 @@ type InitType = {
 const WSOpcodes = {
     COMPLETE: 'C',
     ERROR: 'R',
-    ENCOMING_TRANSACTION: 'TR',
+    INCOMING_TRANSACTION: 'TR',
+    INCOMING_TRANSACTION_BALANCE: 'TZ',
     INIT: 'INIT',
     NEW_MERCHANT: 'NM',
     TRANSACTION: 'T',
     PUSH: 'P',
     ALREADY_CONNECTED: 'ALREADY_CONNECTED',
-    BROKEN: 'BROKEN'
+    BROKEN: 'BROKEN',
+    TOP: 'P',
+    BOT_CLICK: 'BC', //stats
+    BOT_SHOW: 'BS', //stats
+    LOAD_GROUP: 'G',
+    GET_RICH: 'GR', //don't used (removed in coin from 01.08.2021)
+    SET_RICH: 'SR', //don't used (removed in coin from 01.08.2021)
+    GET_TRANSCATIONS: 'TX',
+    GET_SCORE: 'GS',
+    GET_MY_PLACE: 'X',
+    GET_GIFT: 'GG',
+    SYNC_TX_LIST: 'SY',
+    TRACK_TYPE: 'TS', //I DON'T NOW | TO DO
+    BUY_ITEM_BY_ID: 'B' //don't used after close mining
 }
 
 export declare interface VKCoinWebSocket {
@@ -78,12 +104,14 @@ export declare interface VKCoinWebSocket {
     on(event: 'answer', listener: (data: { id: number, type: 'C' | 'R', message: string }) => void): this
     on(event: 'ALREADY_CONNECTED', listener: () => void): this
     on(event: 'BROKEN', listener: () => void): this
+    on(event: 'transfer', listener: (data: { id: number, amount: number, fromId: number, currentBalance: number, getMore: () => Promise<TransferItem> }) => void): this
 
     once(event: 'connect', listener: () => void): this
     once(event: 'init', listener: (data: InitType) => void): this
     once(event: 'answer', listener: (data: { id: number, type: 'C' | 'R', message: string }) => void): this
     once(event: 'ALREADY_CONNECTED', listener: () => void): this
     once(event: 'BROKEN', listener: () => void): this
+    once(event: 'transfer', listener: (data: { id: number, amount: number, fromId: number, currentBalance: number, getMore: () => Promise<TransferItem> }) => void): this
 }
 
 export class VKCoinWebSocket extends EventEmitter {
@@ -126,6 +154,27 @@ export class VKCoinWebSocket extends EventEmitter {
             if (messsage === WSOpcodes.BROKEN) return this.emit(WSOpcodes.BROKEN);
 
             if ([WSOpcodes.COMPLETE, WSOpcodes.ERROR].includes(messsage[0])) return this.onAnswer(messsage)
+
+            const args = messsage.split(' ')
+            const opcode = args[0]
+
+            //old transaction message
+            if (opcode === WSOpcodes.INCOMING_TRANSACTION) return;
+
+            //new transaction message (with current balance)
+            if (opcode === WSOpcodes.INCOMING_TRANSACTION_BALANCE) {
+                this.score = +args[4]
+                console.log('a')
+                return this.emit('transfer', {
+                    id: +args[3],
+                    amount: +args[1],
+                    fromId: +args[2],
+                    currentBalance: this.score,
+                    getMore: async () => {
+                        return (await this.getTransactionsById([+args[3]]))[0]
+                    }
+                })
+            }
 
             console.log('opcode', messsage)
         }
@@ -185,12 +234,13 @@ export class VKCoinWebSocket extends EventEmitter {
         this.connect()
     }
 
-    async start() {
-        if (this.ws == null) throw new Error('WebSocket not connected')
+    async start(iframe_url?: string): Promise<InitType> {
+        if (this.ws != null) throw new Error('WebSocket is already started')
+        if (iframe_url) this.url = formatURL(iframe_url)
 
-        const res = new Promise<true>((res, rej) => {
-            this.once('init', () => {
-                res(true)
+        const res = new Promise<InitType>((res, rej) => {
+            this.once('init', (data) => {
+                res(data)
             })
             this.once('BROKEN', () => {
                 rej(new Error('iframe_url is invalid'))
@@ -243,5 +293,52 @@ export class VKCoinWebSocket extends EventEmitter {
         if (payload != undefined && !(-2000000000 >= payload && payload <= 2000000000)) throw new Error(`payload range must be from -2000000000 to 2000000000`)
 
         return this.command(`${WSOpcodes.TRANSACTION} ${vk_id} ${amount} ${Number(isFromUrl)}${payload != undefined ? ` ${payload}` : ''}${asMerchant != undefined ? ` ${Number(asMerchant)}` : ''}`)
+    }
+    //'{"score":2000,"place":7971264,"items":[570760228,570757995,570756978,570756211,570755867,570755800,569935646,569935644,569935605,569935600,569935598,569935594,569735848,569735847,569240000,569239999,569200030,569200029,569200026,569200021,569200015,569200010,569200003,569199997,569199992,569199989,569199988,569199987,569199984,569199980,569199974,569199971,569199963,569199956,569199953,569199951,569199945,569199941,569199940,569199932,569199927,569199926,569199923,569199922,569199921,569199920,569199918,569199917,569199916,569199915,569199914,569199913,569199912,569199911,569199910,569199908,569199907,569199906,569199905,569199903,569199902,569199901,569199900,569199898,569199897,569199896,569199894,569199893,569199892,569199890,569199889,569199887,569199885,569199884,569199883,569199882,569199881,569199880,569199879,569199878,569199877,569199876,569199875,569199874,569199873,569199872,569199871,569199870,569199869,569199868,569199867,569199866,569199865,569199864,569199863,569199862,569199861,569199860,569199859,569199856],"txId":509410683,"ownTx":570760228}'
+
+    async getUserScores(ids: number[]): Promise<{ [id: number]: number }> {
+        const res = await this.command(WSOpcodes.GET_SCORE + ' ' + ids.join(' '))
+
+        return JSON.parse(res)
+    }
+
+    //TO DO RESPONSE
+    async getGift() {
+        const res = await this.command(WSOpcodes.GET_GIFT)
+
+        return res
+    }
+
+    async syncHistory(): Promise<{ items: number[], score: number, gameFlag: 0 | 1 } | null> {
+        const res = await this.command(WSOpcodes.SYNC_TX_LIST)
+
+        const data = JSON.parse(res)
+        this.score = data.score
+
+        return data
+    }
+
+    async getMyPos(): Promise<number> {
+        const res = await this.command(WSOpcodes.GET_MY_PLACE)
+
+        return +res
+    }
+
+    async getTransactionsById(ids: number[]): Promise<TransferItem[]> {
+        const res = await this.command(WSOpcodes.GET_TRANSCATIONS + ' ' + ids.join(' '))
+
+        return JSON.parse(res)
+    }
+
+    async getTop(): Promise<Top> {
+        const res = await this.command(WSOpcodes.TOP)
+
+        return JSON.parse(res)
+    }
+
+    async getGroupById(id: number): Promise<Group> {
+        const res = await this.command(WSOpcodes.LOAD_GROUP + ' ' + Math.abs(id))
+
+        return JSON.parse(res)
     }
 }

@@ -60,9 +60,10 @@ export class VKCoinAPI {
         return this.getUserBalance(this.userId)
     }
 
-    async getTransactions(tx: 1 | 2): Promise<Types.MethodTXResponse> {
+    async getTransactions(tx: 1 | 2 | number | number[]): Promise<Types.MethodTXResponse> {
+        if(!Array.isArray(tx)) tx = [tx]
         return this.call('tx', {
-            tx: [tx]
+            tx: tx
         })
     }
 
@@ -80,6 +81,14 @@ export class VKCoinAPI {
 
     async getTransactionsFromLinks(): Promise<Types.MethodTXResponse> {
         return this.getTransactions(1)
+    }
+
+    async getTranscationById(id: number): Promise<Types.MethodTXResponse> {
+        return this.getTransactions(id)
+    }
+
+    async getTranscationsById(ids: number[]): Promise<Types.MethodTXResponse> {
+        return this.getTransactions(ids)
     }
 
     async setShopName(name: string): Promise<Types.MethodSetNameResponse> {

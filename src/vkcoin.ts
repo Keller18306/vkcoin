@@ -29,11 +29,9 @@ export class VKCoin {
         if(typeof id != 'number') throw new Error('can not get userId by access_token')
         if(typeof url != 'string' || url == '') throw new Error('can not get iframeUrl by access_token')
 
-        this.ws = new VKCoinWebSocket(url)
+        await this.ws.start(url)
 
-        await this.ws.start()
-
-        const key = this.ws.getMerchantKey()
+        const key = await this.ws.getMerchantKey()
 
         if(typeof key != 'string') throw new Error('can not get key by access_token')
 
