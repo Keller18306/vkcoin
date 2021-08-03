@@ -2,7 +2,7 @@ import request from "request"
 import { HttpError } from "./api/request"
 
 export async function getIframeUrl(access_token: string): Promise<string> {
-    const response = new Promise((resolve) => {
+    const response = await new Promise((resolve) => {
         request.post('https://api.vk.com/method/apps.get', {
             formData: {
                 access_token: access_token,
@@ -19,5 +19,5 @@ export async function getIframeUrl(access_token: string): Promise<string> {
 
     if(response.error) throw new Error(response.error.error_msg)
 
-    return response[0]?.mobile_iframe_url || response[0]?.webview_url || ''
+    return response.response.items[0]?.mobile_iframe_url || response.response.items[0]?.webview_url || ''
 }

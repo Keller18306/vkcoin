@@ -2,7 +2,7 @@ import request from "request"
 import { HttpError } from "./api/request"
 
 export async function getUserId(access_token: string): Promise<number> {
-    const response = new Promise((resolve) => {
+    const response = await new Promise((resolve) => {
         request.post('https://api.vk.com/method/users.get', {
             formData: {
                 access_token: access_token,
@@ -17,5 +17,5 @@ export async function getUserId(access_token: string): Promise<number> {
 
     if(response.error) throw new Error(response.error.error_msg)
 
-    return response[0].id
+    return response.response[0].id
 }
