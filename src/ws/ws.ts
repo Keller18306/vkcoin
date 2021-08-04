@@ -4,6 +4,23 @@ import { formatURL, isJSON, timePromise } from './utils';
 import { default as WebSocket } from 'ws'
 import * as Types from '../api/types';
 
+export class WSAPIError extends Error {
+    readonly code: string;
+
+    constructor(code: number | string) {
+        super()
+
+        if (Error.captureStackTrace) {
+            Error.captureStackTrace(this, WSAPIError)
+        }
+
+        this.name = 'WebSocket API'
+
+        this.code = `${code}`
+        this.message = `${code}`
+    }
+}
+
 type Group = {
     id: number,
     name: string,
@@ -267,7 +284,7 @@ export class VKCoinWebSocket extends EventEmitter {
                 that.removeListener('answer', answer)
 
                 if (data.type === WSOpcodes.COMPLETE) return res(data.message)
-                if (data.type === WSOpcodes.ERROR) return rej(new Error(data.message))
+                if (data.type === WSOpcodes.ERROR) return rej(new WSAPIError(data.message))
 
                 rej(new Error('unknown response type'))
             }
@@ -287,7 +304,7 @@ export class VKCoinWebSocket extends EventEmitter {
 
     async transfer(vk_id: number, amount: number, fromShop: boolean = false, isFromUrl: boolean = false, payload: number = 0): Promise<Types.MethodSendResponse> {
         if ((isFromUrl || payload) && fromShop) throw new Error('cannot send from url, when enabled fromShop or payload')
-        if (!(-2000000000 >= payload && payload <= 2000000000)) throw new Error(`payload range must be from -2000000000 to 2000000000`)
+        if (!(-2000000000 <= payload && payload <= 2000000000)) throw new Error(`payload range must be from -2000000000 to 2000000000`)
 
         const res = await this.command(`${WSOpcodes.TRANSACTION} ${vk_id} ${amount} ${Number(isFromUrl)} ${payload} ${Number(fromShop)}`)
 

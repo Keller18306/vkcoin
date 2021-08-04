@@ -1,4 +1,4 @@
-import { APIError, request } from './request'
+import { RestAPIError, request } from './request'
 import * as Types from './types'
 import { getLink } from './noAuth'
 
@@ -33,7 +33,7 @@ export class VKCoinAPI {
             ...params
         })
 
-        if (response.error) throw new APIError(response.error.code, response.error.message)
+        if (response.error) throw new RestAPIError(response.error.code, response.error.message)
 
         return response.response
     }

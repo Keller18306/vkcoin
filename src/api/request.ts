@@ -18,14 +18,14 @@ export class HttpError extends Error {
     }
 }
 
-export class APIError extends Error {
+export class RestAPIError extends Error {
     readonly code: number;
 
     constructor(code: number, message: string) {
         super()
 
         if (Error.captureStackTrace) {
-            Error.captureStackTrace(this, APIError)
+            Error.captureStackTrace(this, RestAPIError)
         }
 
         this.code = code

@@ -1,3 +1,7 @@
+import { RestAPIError } from "./api/request"
+import { MethodSendResponse } from "./api/types"
+import { WSAPIError } from "./ws"
+
 type Worker = {
     getIndex: () => number
     busy: boolean
@@ -5,14 +9,19 @@ type Worker = {
     delay: number | null
 }
 
-type Task = { toId: number, amount: number, fromShop: boolean, success: (any: any) => void, error: () => void }
+type Task = { toId: number, amount: number, fromShop: boolean, success: (response: MethodSendResponse) => void, error: (err: WSAPIError | RestAPIError) => void }
 
 export class VKCoinQueuer {
     private queue: Task[] = []
 
     private workers: Worker[] = []
 
-    addWorker(func: (toId: number, amount: number, fromShop: boolean) => any, delay: number | null = null) {
+    constructor() {
+        this.queue = []
+        this.workers = []
+    }
+
+    addWorker(func: (toId: number, amount: number, fromShop: boolean) => Promise<MethodSendResponse>, delay: number | null = null) {
         const worker: Worker = {
             busy: false,
             func: func,
@@ -31,20 +40,27 @@ export class VKCoinQueuer {
         this.workers.push(worker)
     }
 
-    addTask(toId: number, amount: number, fromShop: boolean, noQueue: boolean = false) {
-        const promise = new Promise<any>((resolve, reject) => {
+    addTask(toId: number, amount: number, fromShop: boolean, noQueue: boolean = false): Promise<MethodSendResponse> {
+        const promise = new Promise<MethodSendResponse>((resolve, reject) => {
             const task: Task = { toId, amount, fromShop, success: resolve, error: reject }
 
             if(noQueue) this.queue.unshift(task)
             this.queue.push(task)
         })
 
-        setImmediate(this.checkTasks)
+        this.checkTasks()
 
         return promise
     }
 
-    private async checkTasks(): Promise<void> {
+    checkTasks(): void {
+        setImmediate(() => {
+            this.doTasks()
+        })
+    }
+
+    private async doTasks(): Promise<void> {
+        const that = this
         if(this.queue.length == 0) return;
 
         let selectedWorker: Worker | null = null;
@@ -61,6 +77,8 @@ export class VKCoinQueuer {
         if(!task) return;
 
         selectedWorker.busy = true
+
+        if(this.queue.length > 0) this.checkTasks()
         
         await selectedWorker.func(task.toId, task.amount, task.fromShop).then(task.success, task.error)
 
@@ -68,6 +86,6 @@ export class VKCoinQueuer {
 
         selectedWorker.busy = false
 
-        setImmediate(this.checkTasks)
+        this.checkTasks()
     }
 }

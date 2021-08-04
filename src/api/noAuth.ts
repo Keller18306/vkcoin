@@ -1,4 +1,4 @@
-import { APIError, request } from "./request";
+import { RestAPIError, request } from "./request";
 
 export async function getUsersBalance(userIds: number[]): Promise<{ [vk_id: number]: number | null }> {
     const response = await request('score', {
@@ -7,7 +7,7 @@ export async function getUsersBalance(userIds: number[]): Promise<{ [vk_id: numb
         userIds: userIds
     })
 
-    if (response.error) throw new APIError(response.error.code, response.error.message)
+    if (response.error) throw new RestAPIError(response.error.code, response.error.message)
 
     const users: { [vk_id: number]: number | null } = {}
 
