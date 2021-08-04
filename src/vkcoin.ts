@@ -1,6 +1,7 @@
 import { VKCoinAPI } from "./api";
 import { getIframeUrl } from "./getIframeUrl";
 import { getUserId } from "./getUserId";
+import { VKCoinQueuer } from "./queuer";
 import { VKCoinWebSocket } from "./ws";
 
 export class VKCoin {
@@ -12,12 +13,16 @@ export class VKCoin {
     public ws: VKCoinWebSocket;
     public api: VKCoinAPI;
 
+    public queuer: VKCoinQueuer;
+
     constructor (access_token: string) {
         if(!access_token) throw new Error('access_token is required')
         this.access_token = access_token
 
         this.ws = new VKCoinWebSocket()
         this.api = new VKCoinAPI({ userId: 1, key: '.' })
+
+        this.queuer = new VKCoinQueuer()
     }
 
     async start() {
@@ -40,6 +45,18 @@ export class VKCoin {
         this.key = key
         this.userId = id
 
+        this.queuer.addWorker((toId: number, amount: number, fromShop: boolean) => {
+            return this.ws.transfer(toId, amount, fromShop)
+        })
+
+        this.queuer.addWorker((toId: number, amount: number, fromShop: boolean) => {
+            return this.api.sendCoins(toId, amount, fromShop)
+        })
+
         return this
+    }
+
+    async transfer(toId: number, amount: number, fromShop: boolean = false) {
+        return this.queuer.addTask(toId, amount, fromShop)
     }
 }
