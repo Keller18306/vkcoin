@@ -1,4 +1,5 @@
 import { VKCoinAPI } from "./api";
+import { MethodSendResponse } from "./api/types";
 import { getIframeUrl } from "./getIframeUrl";
 import { getUserId } from "./getUserId";
 import { VKCoinQueuer } from "./queuer";
@@ -47,7 +48,7 @@ export class VKCoin {
 
         this.queuer.addWorker((toId: number, amount: number, fromShop: boolean) => {
             return this.ws.transfer(toId, amount, fromShop)
-        })
+        }, 3000)
 
         this.queuer.addWorker((toId: number, amount: number, fromShop: boolean) => {
             return this.api.sendCoins(toId, amount, fromShop)
@@ -56,7 +57,7 @@ export class VKCoin {
         return this
     }
 
-    async transfer(toId: number, amount: number, fromShop: boolean = false) {
-        return this.queuer.addTask(toId, amount, fromShop)
+    async transfer(toId: number, amount: number, fromShop: boolean = false, noQueue: boolean = false): Promise<MethodSendResponse> {
+        return this.queuer.addTask(toId, amount, fromShop, noQueue)
     }
 }
