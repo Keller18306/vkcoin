@@ -2,7 +2,7 @@ import { EventEmitter } from 'events';
 import { formatURL, isJSON, timePromise } from './utils';
 
 import { default as WebSocket } from 'ws'
-import { TransferItem } from '../api/types';
+import * as Types from '../api/types';
 
 type Group = {
     id: number,
@@ -76,7 +76,7 @@ const WSOpcodes = {
     COMPLETE: 'C',
     ERROR: 'R',
     INCOMING_TRANSACTION: 'TR',
-    INCOMING_TRANSACTION_BALANCE: 'TZ',
+    UPDATE_BALANCE: 'TZ',
     INIT: 'INIT',
     NEW_MERCHANT: 'NM',
     TRANSACTION: 'T',
@@ -104,14 +104,14 @@ export declare interface VKCoinWebSocket {
     on(event: 'answer', listener: (data: { id: number, type: 'C' | 'R', message: string }) => void): this
     on(event: 'ALREADY_CONNECTED', listener: () => void): this
     on(event: 'BROKEN', listener: () => void): this
-    on(event: 'transfer', listener: (data: { id: number, amount: number, fromId: number, currentBalance: number, getMore: () => Promise<TransferItem> }) => void): this
+    on(event: 'transfer', listener: (data: { id: number, amount: number, fromId: number, getMore: () => Promise<Types.TransferItem>, getBalance: () => number }) => void): this
 
     once(event: 'connect', listener: () => void): this
     once(event: 'init', listener: (data: InitType) => void): this
     once(event: 'answer', listener: (data: { id: number, type: 'C' | 'R', message: string }) => void): this
     once(event: 'ALREADY_CONNECTED', listener: () => void): this
     once(event: 'BROKEN', listener: () => void): this
-    once(event: 'transfer', listener: (data: { id: number, amount: number, fromId: number, currentBalance: number, getMore: () => Promise<TransferItem> }) => void): this
+    once(event: 'transfer', listener: (data: { id: number, amount: number, fromId: number, getMore: () => Promise<Types.TransferItem>, getBalance: () => number }) => void): this
 }
 
 export class VKCoinWebSocket extends EventEmitter {
@@ -158,23 +158,19 @@ export class VKCoinWebSocket extends EventEmitter {
             const args = messsage.split(' ')
             const opcode = args[0]
 
-            //old transaction message
-            if (opcode === WSOpcodes.INCOMING_TRANSACTION) return;
+            //transaction message
+            if (opcode === WSOpcodes.INCOMING_TRANSACTION) return this.emit('transfer', {
+                id: +args[3],
+                amount: +args[1],
+                fromId: +args[2],
+                getMore: async () => {
+                    return (await this.getTransactionsById([+args[3]]))[0]
+                },
+                getBalance: () => { return this.score }
+            })
 
-            //new transaction message (with current balance)
-            if (opcode === WSOpcodes.INCOMING_TRANSACTION_BALANCE) {
-                this.score = +args[4]
-                console.log('a')
-                return this.emit('transfer', {
-                    id: +args[3],
-                    amount: +args[1],
-                    fromId: +args[2],
-                    currentBalance: this.score,
-                    getMore: async () => {
-                        return (await this.getTransactionsById([+args[3]]))[0]
-                    }
-                })
-            }
+            //new balance
+            if (opcode === WSOpcodes.UPDATE_BALANCE) return this.score = +args[4];
 
             console.log('opcode', messsage)
         }
@@ -197,6 +193,8 @@ export class VKCoinWebSocket extends EventEmitter {
     }
 
     private onClose(code: number, reason: string) {
+        this.score = null
+
         if (this.pingInterval) clearInterval(this.pingInterval)
 
         if (this.reconnectOnClose) this.reconnect()
@@ -287,26 +285,22 @@ export class VKCoinWebSocket extends EventEmitter {
         return JSON.parse(response)
     }
 
-    async transfer(vk_id: number, amount: number, isFromUrl: boolean = false, payload?: number, asMerchant?: boolean) {
-        if (isFromUrl && asMerchant) throw new Error('cannot send from url, when enabled as merchant')
-        if (asMerchant != undefined && payload == undefined) throw new Error('payload can not be undefined, when asMerchant declared')
-        if (payload != undefined && !(-2000000000 >= payload && payload <= 2000000000)) throw new Error(`payload range must be from -2000000000 to 2000000000`)
+    async transfer(vk_id: number, amount: number, fromShop: boolean = false, isFromUrl: boolean = false, payload: number = 0): Promise<Types.MethodSendResponse> {
+        if ((isFromUrl || payload) && fromShop) throw new Error('cannot send from url, when enabled fromShop or payload')
+        if (!(-2000000000 >= payload && payload <= 2000000000)) throw new Error(`payload range must be from -2000000000 to 2000000000`)
 
-        return this.command(`${WSOpcodes.TRANSACTION} ${vk_id} ${amount} ${Number(isFromUrl)}${payload != undefined ? ` ${payload}` : ''}${asMerchant != undefined ? ` ${Number(asMerchant)}` : ''}`)
+        const res = await this.command(`${WSOpcodes.TRANSACTION} ${vk_id} ${amount} ${Number(isFromUrl)} ${payload} ${Number(fromShop)}`)
+
+        const data: { score: number, place: number, items: number[], txId: number, ownTx: number } = JSON.parse(res)
+        this.score = data.score
+
+        return { id: data.ownTx, amount: amount, current: data.score }
     }
-    //'{"score":2000,"place":7971264,"items":[570760228,570757995,570756978,570756211,570755867,570755800,569935646,569935644,569935605,569935600,569935598,569935594,569735848,569735847,569240000,569239999,569200030,569200029,569200026,569200021,569200015,569200010,569200003,569199997,569199992,569199989,569199988,569199987,569199984,569199980,569199974,569199971,569199963,569199956,569199953,569199951,569199945,569199941,569199940,569199932,569199927,569199926,569199923,569199922,569199921,569199920,569199918,569199917,569199916,569199915,569199914,569199913,569199912,569199911,569199910,569199908,569199907,569199906,569199905,569199903,569199902,569199901,569199900,569199898,569199897,569199896,569199894,569199893,569199892,569199890,569199889,569199887,569199885,569199884,569199883,569199882,569199881,569199880,569199879,569199878,569199877,569199876,569199875,569199874,569199873,569199872,569199871,569199870,569199869,569199868,569199867,569199866,569199865,569199864,569199863,569199862,569199861,569199860,569199859,569199856],"txId":509410683,"ownTx":570760228}'
 
     async getUserScores(ids: number[]): Promise<{ [id: number]: number }> {
         const res = await this.command(WSOpcodes.GET_SCORE + ' ' + ids.join(' '))
 
         return JSON.parse(res)
-    }
-
-    //TO DO RESPONSE
-    async getGift() {
-        const res = await this.command(WSOpcodes.GET_GIFT)
-
-        return res
     }
 
     async syncHistory(): Promise<{ items: number[], score: number, gameFlag: 0 | 1 } | null> {
@@ -324,7 +318,7 @@ export class VKCoinWebSocket extends EventEmitter {
         return +res
     }
 
-    async getTransactionsById(ids: number[]): Promise<TransferItem[]> {
+    async getTransactionsById(ids: number[]): Promise<Types.TransferItem[]> {
         const res = await this.command(WSOpcodes.GET_TRANSCATIONS + ' ' + ids.join(' '))
 
         return JSON.parse(res)
