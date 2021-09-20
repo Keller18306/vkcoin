@@ -1,5 +1,6 @@
 {
     "compilerOptions": {
+        "rootDir": "./src/",
         "target": "ESNext",
         "moduleResolution": "Node",
         "module": "commonjs",
@@ -8,6 +9,10 @@
         "esModuleInterop": true,
         "forceConsistentCasingInFileNames": true,
         "outDir": "./build/",
-        "removeComments": true
-    }
+        "removeComments": true,
+        "declaration": true
+    },
+    "exclude": [
+        "./test/"
+    ]
 }

@@ -1,21 +1,21 @@
 {
-  "name": "lib-coin",
-  "version": "0.0.1",
-  "description": "",
+  "name": "@keller18306/vkcoin",
+  "version": "0.1.0",
+  "description": "Powerful library for interacting with VKCoin",
   "main": "./src/index.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Keller18306/node-lib-coin.git"
+    "url": "git+https://github.com/Keller18306/vkcoin.git"
   },
   "author": "Keller",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/Keller18306/node-lib-coin/issues"
+    "url": "https://github.com/Keller18306/vkcoin/issues"
   },
-  "homepage": "https://github.com/Keller18306/node-lib-coin#readme",
+  "homepage": "https://github.com/Keller18306/vkcoin#readme",
   "dependencies": {
     "request": "^2.88.2",
     "ws": "^7.5.2"
