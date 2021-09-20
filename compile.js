@@ -7,5 +7,4 @@ void function main() {
     const package = require('./package.json')
     package.main = 'index.js'
     writeFileSync('./build/package.json', JSON.stringify(package, null, 4))
-    copyFileSync('./package-lock.json', './build/package-lock.json')
 }()
