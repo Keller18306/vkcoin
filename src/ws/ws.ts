@@ -53,6 +53,9 @@ export class VKCoinWebSocket extends EventEmitter {
     private queueId: number = 0;
 
     /**
+     * @description Данный WebSocket API используется для взаимодействия с приложеним VKCoin.
+     * Этим API можно как бы эммитировать нахождение в приложении, взаимодействуя со всеми возможностями
+     * настоящего приложения.
      * @param iframe_url Ссылка на приложение. Можно будет указать позже в методе this.start(iframe_url)
      */
     constructor(iframe_url?: string) {
