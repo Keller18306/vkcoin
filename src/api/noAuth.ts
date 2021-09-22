@@ -2,7 +2,7 @@ import { RestAPIError, request } from "./request";
 
 /**
  * @description Получает балансы пользователей
- * @param {number[]} userIds Массив с айди пользователей
+ * @param userIds Массив с айди пользователей
  * @returns Объект с балансами пользователей
  */
 export async function getUsersBalance(userIds: number[]): Promise<{ [vk_id: number]: number | null }> {
@@ -25,7 +25,7 @@ export async function getUsersBalance(userIds: number[]): Promise<{ [vk_id: numb
 
 /**
  * @description Получает баланс одного пользователя
- * @param {number} userId Айди пользователей
+ * @param userId Айди пользователей
  * @returns Текущий баланс пользователя
  */
 export async function getUserBalance(userId: number): Promise<number | null> {
@@ -42,7 +42,7 @@ function dec2hex(number: number): string {
 
 /**
  * @description Генерация ссылки на оплату
- * @param {Object} params Объект с параметрами
+ * @param params Объект с параметрами
  * @returns Ссылка на оплату
  */
 export function getLink(params: {
@@ -63,8 +63,8 @@ export function getLink(params: {
 
 /**
  * @description Форматирует число коинов в более читабельный для человека вид
- * @param {number} coins Число коинов
- * @param {boolean} fixed Нужно ли обязательно оставлять 3 знака после запятой?
+ * @param coins Число коинов
+ * @param fixed Нужно ли обязательно оставлять 3 знака после запятой?
  * @returns Отформатированное число
  */
 export function formatCoins(coins: number, fixed: boolean = false) {
