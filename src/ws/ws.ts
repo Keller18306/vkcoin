@@ -90,7 +90,7 @@ export class VKCoinWebSocket extends EventEmitter {
                 amount: +args[1],
                 fromId: +args[2],
                 getMore: async () => {
-                    return (await this.getTransactionsById([+args[3]]))[0]
+                    return this.getTransactionById(+args[3])
                 },
                 getBalance: () => { return this.score }
             })
