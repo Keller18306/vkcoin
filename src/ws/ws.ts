@@ -52,6 +52,9 @@ export class VKCoinWebSocket extends EventEmitter {
 
     private queueId: number = 0;
 
+    /**
+     * @param iframe_url Ссылка на приложение. Можно будет указать позже в методе this.start(iframe_url)
+     */
     constructor(iframe_url?: string) {
         super()
 
@@ -126,6 +129,9 @@ export class VKCoinWebSocket extends EventEmitter {
         if (this.reconnectOnClose) this.reconnect()
     }
 
+    /**
+     * @description Запуск начала процедуры подключения
+     */
     connect(): void {
         if (!this.url) throw new Error('can not connect without url')
         if (this.ws != null) throw new Error('WebSocket is already started')
@@ -140,6 +146,9 @@ export class VKCoinWebSocket extends EventEmitter {
         })
     }
 
+    /**
+     * @description Запуск начала процедуры отключения
+     */
     disconnect(): void {
         if (this.ws == null) throw new Error('WebSocket is already disconnected')
 
@@ -153,11 +162,19 @@ export class VKCoinWebSocket extends EventEmitter {
         this.ws = null
     }
 
+    /**
+     * @description Запуск начала процедуры переподключения
+     */
     reconnect(): void {
         if (this.ws != null) this.disconnect()
         this.connect()
     }
 
+    /**
+     * @description Запуск WebSocket API
+     * @param iframe_url Если указано, то текущий iframe_url будет заменён на указанный
+     * @returns Объект инициализации
+     */
     async start(iframe_url?: string): Promise<InitType> {
         if (this.ws != null) throw new Error('WebSocket is already started')
         if (iframe_url) this.url = formatURL(iframe_url)
@@ -179,6 +196,11 @@ export class VKCoinWebSocket extends EventEmitter {
         return res
     }
 
+    /**
+     * @description "Голый" вызов команды
+     * @param command OPCode комманда
+     * @returns Результат выполнения
+     */
     async command(command: string): Promise<string> {
         if (this.ws == null) throw new Error('WebSocket not connected')
         this.queueId++
@@ -205,12 +227,25 @@ export class VKCoinWebSocket extends EventEmitter {
         return promise
     }
 
+    /**
+     * @description Получает API ключ для VKCoin
+     * @returns Ключ API
+     */
     async getMerchantKey(): Promise<string> {
         const response = await this.command(WSOpcodes.NEW_MERCHANT)
 
         return JSON.parse(response)
     }
 
+    /**
+     * @description Отправляет коины другому пользователю
+     * @param vk_id Айди пользователя
+     * @param amount Сумма, которую следует отправить (целое число)
+     * @param fromShop Отправить от имени магазина?
+     * @param isFromUrl Была ли транзакция выполнена по ссылке?
+     * @param payload Полезная нагрузка, к транзакции, выполненной по ссылке
+     * @returns Объект с информацией о транзакции
+     */
     async transfer(vk_id: number, amount: number, fromShop: boolean = false, isFromUrl: boolean = false, payload: number = 0): Promise<Types.MethodSendResponse> {
         if ((isFromUrl || payload) && fromShop) throw new Error('cannot send from url, when enabled fromShop or payload')
         if (!(-2000000000 <= payload && payload <= 2000000000)) throw new Error(`payload range must be from -2000000000 to 2000000000`)
@@ -238,28 +273,51 @@ export class VKCoinWebSocket extends EventEmitter {
         return data
     }
 
+    /**
+     * @description Получает текущую позицию в топе
+     * @returns Ваша текущая позиция в топе
+    */
     async getMyPos(): Promise<number> {
         const res = await this.command(WSOpcodes.GET_MY_PLACE)
 
         return +res
     }
 
+    /**
+     * @description Получает транзакции на текущий аккаунт по айди транзакций
+     * @param ids Массив с айди транзакций
+     * @returns Массив с транзакциями
+    */
     async getTransactionsById(ids: number[]): Promise<Types.TransferItem[]> {
         const res = await this.command(WSOpcodes.GET_TRANSCATIONS + ' ' + ids.join(' '))
 
         return JSON.parse(res)
     }
 
+    /**
+     * @description Получает транзакцию на текущий аккаунт по айди транзакции
+     * @param id Айди транзакции
+     * @returns Массив с транзакциями
+    */
     async getTransactionById(id: number): Promise<Types.TransferItem> {
         return (await this.getTransactionsById([id]))[0]
     }
 
+    /**
+     * @description Получает текущий топ
+     * @returns Объект топа
+    */
     async getTop(): Promise<Top> {
         const res = await this.command(WSOpcodes.TOP)
 
         return JSON.parse(res)
     }
 
+    /**
+     * @description Получает группу по айди
+     * @param id Айди группы
+     * @returns Объект группы
+    */
     async getGroupById(id: number): Promise<Group> {
         const res = await this.command(WSOpcodes.LOAD_GROUP + ' ' + Math.abs(id))
 
