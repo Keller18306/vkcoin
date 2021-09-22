@@ -250,6 +250,10 @@ export class VKCoinWebSocket extends EventEmitter {
         return JSON.parse(res)
     }
 
+    async getTransactionById(id: number): Promise<Types.TransferItem> {
+        return (await this.getTransactionsById([id]))[0]
+    }
+
     async getTop(): Promise<Top> {
         const res = await this.command(WSOpcodes.TOP)
 
