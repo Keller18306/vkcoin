@@ -84,15 +84,17 @@ export class VKCoinAPI {
     /**
      * @description Получает транзакции на текущий аккаунт
      * @param tx Тип транзакции или айди транзакций
-     * (1 - для транзакций по ссылкам,
-     * 2 - для транзакций на текущий аккаунта,
+     * (1 - для транзакций по ссылкам (1000 штук),
+     * 2 - для транзакций на текущий аккаунта (100 штук),
      * остальное для выборкий транзакций по их id)
+     * @param lastTx Айди последней транзакции, после которой будут возвращены результаты. (будут отсеяны старые, включая введённый, а показаны более новые)
      * @returns Массив с транзакциями
      */
-    async getTransactions(tx: 1 | 2 | number | number[]): Promise<Types.MethodTXResponse> {
+    async getTransactions(tx: 1 | 2 | number | number[], lastTx?: number): Promise<Types.MethodTXResponse> {
         if (!Array.isArray(tx)) tx = [tx]
         return this.call('tx', {
-            tx: tx
+            tx: tx,
+            lastTx: lastTx
         })
     }
 
